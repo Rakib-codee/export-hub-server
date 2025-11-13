@@ -25,13 +25,19 @@ async function run() {
 
     const db = client.db("EI-hub");
     const modelCollection = db.collection("models");
-
+//find api
     app.get("/models", async (req, res) => {
       const result = await modelCollection.find().toArray();
 
       res.send(result);
     });
-
+//post api
+    app.post("/models", async (req, res) => {
+      const newModel = req.body;
+      console.log("Adding new model:", newModel);
+      const result = await modelCollection.insertOne(newModel);
+      res.send(result);
+    });
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
