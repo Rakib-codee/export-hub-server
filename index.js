@@ -51,6 +51,50 @@ async function run() {
       res.send(result);
     });
 
+    // Update model API
+    app.put("/models/:id", async (req, res) => {
+      const { id } = req.params;
+      const updateData = req.body;
+      console.log("Updating model with id:", id, updateData);
+      
+      try {
+        const queryId = new ObjectId(id);
+        const result = await modelCollection.updateOne(
+          { _id: queryId },
+          { $set: updateData }
+        );
+        
+        if (result.matchedCount === 0) {
+          return res.status(404).send({ error: "Product not found" });
+        }
+        
+        res.send(result);
+      } catch (error) {
+        console.error("Error updating product:", error);
+        res.status(500).send({ error: "Failed to update product" });
+      }
+    });
+
+    // Delete model API
+    app.delete("/models/:id", async (req, res) => {
+      const { id } = req.params;
+      console.log("Deleting model with id:", id);
+      
+      try {
+        const queryId = new ObjectId(id);
+        const result = await modelCollection.deleteOne({ _id: queryId });
+        
+        if (result.deletedCount === 0) {
+          return res.status(404).send({ error: "Product not found" });
+        }
+        
+        res.send(result);
+      } catch (error) {
+        console.error("Error deleting product:", error);
+        res.status(500).send({ error: "Failed to delete product" });
+      }
+    });
+
     // Create Import API
     app.post("/imports", async (req, res) => {
       const { userId, productId, quantity } = req.body;
