@@ -1,6 +1,7 @@
 const express = require("express");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
+require("dotenv").config();
 const cors = require("cors");
 const port = 3000;
 
@@ -8,7 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 const uri =
-  "mongodb+srv://ei-hub:P5YuE6lYSEszWZvh@cluster0.ddxvdvm.mongodb.net/?appName=Cluster0";
+  process.env.MONGODB_URI || `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.ddxvdvm.mongodb.net/?appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -27,6 +28,7 @@ async function run() {
     const modelCollection = db.collection("models");
     const importCollection = db.collection("imports");
     const exportCollection = db.collection("exports");
+    const usersCollection = db.collection("users");
 
     // Find all models API
     app.get("/models", async (req, res) => {
@@ -187,6 +189,59 @@ async function run() {
         .find({ userId })
         .toArray();
       res.send(exports);
+    });
+
+    // Save or update user role
+    app.post("/users", async (req, res) => {
+      const { userId, role, email, name } = req.body;
+      console.log("Saving user role:", { userId, role, email, name });
+      
+      try {
+        const userData = {
+          userId,
+          role,
+          email,
+          name,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        const existingUser = await usersCollection.findOne({ userId });
+        
+        if (existingUser) {
+          // Update existing user
+          await usersCollection.updateOne(
+            { userId },
+            { $set: { role, updatedAt: new Date() } }
+          );
+          res.send({ message: "User role updated", role });
+        } else {
+          // Create new user
+          const result = await usersCollection.insertOne(userData);
+          res.send({ message: "User created", role, _id: result.insertedId });
+        }
+      } catch (error) {
+        console.error("Error saving user:", error);
+        res.status(500).send({ error: "Failed to save user" });
+      }
+    });
+
+    // Get user role
+    app.get("/users/:userId", async (req, res) => {
+      const { userId } = req.params;
+      console.log("Getting user role for:", userId);
+      
+      try {
+        const user = await usersCollection.findOne({ userId });
+        if (user) {
+          res.send({ role: user.role });
+        } else {
+          res.status(404).send({ error: "User not found" });
+        }
+      } catch (error) {
+        console.error("Error getting user:", error);
+        res.status(500).send({ error: "Failed to get user" });
+      }
     });
 
     await client.db("admin").command({ ping: 1 });
